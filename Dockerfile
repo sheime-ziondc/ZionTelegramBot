@@ -20,16 +20,17 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY glossary.json ./glossary.json
 
-# Persist per-chat settings, context and usage counters across restarts.
-RUN mkdir -p /app/data && chown -R node:node /app
-VOLUME ["/app/data"]
+# Where per-chat settings, conversation context and the spend counter live.
+# Mount a persistent volume here in your host's dashboard; without one the
+# budget cap resets on every restart (the app says so loudly at startup).
+#
+# Deliberately NOT declared as a Docker VOLUME: several hosts, Railway among
+# them, manage volumes themselves and the instruction conflicts with that.
+RUN mkdir -p /app/data
 ENV STATE_FILE=/app/data/state.json
 
-USER node
 EXPOSE 8080
 
-# Only meaningful in webhook mode; harmless in polling mode.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||8080)+'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(process.env.MODE==='webhook'?1:0))"
-
+# Runs as root so that a host-mounted volume - typically owned by root - stays
+# writable. The container runs only this bot and executes no untrusted input.
 CMD ["node", "dist/index.js"]
