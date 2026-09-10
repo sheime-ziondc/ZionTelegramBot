@@ -1,9 +1,44 @@
 import { createServer, type Server } from "node:http";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { config } from "./config.js";
 import { bot } from "./bot.js";
 import { availableEngines, getProvider } from "./providers/index.js";
 import { store } from "./store.js";
 import { getStatus } from "./budget.js";
+
+/**
+ * The state file holds the spend counter. If it silently fails to persist, the
+ * budget cap resets on every restart and stops protecting anything - so prove
+ * the directory is writable at startup and say so loudly if it is not.
+ *
+ * The usual cause is a mounted volume owned by root while the container runs as
+ * an unprivileged user, which is the default on several hosts.
+ */
+function verifyStateWritable(): void {
+  const dir = dirname(config.STATE_FILE);
+  const probe = join(dir, ".write-probe");
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(probe, "ok", "utf8");
+    rmSync(probe, { force: true });
+    console.log(`[store] state directory is writable: ${dir}`);
+  } catch (err) {
+    console.error("");
+    console.error("=".repeat(72));
+    console.error(`[store] CANNOT WRITE TO ${dir}`);
+    console.error(`[store] ${err instanceof Error ? err.message : String(err)}`);
+    console.error("");
+    console.error("The bot will still translate, but nothing will persist:");
+    console.error("  - the Anthropic spend cap resets to $0 on every restart");
+    console.error("  - per-chat settings and conversation context are lost");
+    console.error("");
+    console.error("Fix: mount a writable volume at this path, or set STATE_FILE");
+    console.error("to somewhere the container user can write.");
+    console.error("=".repeat(72));
+    console.error("");
+  }
+}
 
 async function registerCommands(): Promise<void> {
   await bot.telegram.setMyCommands([
@@ -83,6 +118,7 @@ async function main(): Promise<void> {
   const provider = getProvider(config.ENGINE);
 
   console.log("[bot] starting Zion Translation Bot");
+  verifyStateWritable();
   console.log(`[bot] engine: ${provider.label} (effort: ${config.EFFORT})`);
   console.log(`[bot] engines available: ${availableEngines().join(", ") || "none"}`);
   console.log(`[bot] languages: ${config.LANGUAGES.join(", ")}`);
