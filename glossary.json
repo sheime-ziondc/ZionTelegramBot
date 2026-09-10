@@ -1,0 +1,19 @@
+[
+  {
+    "term": "Zion Church",
+    "translations": { "en": "Zion Church", "ko": "시온교회", "es": "Iglesia Sion" }
+  },
+  {
+    "term": "Sunday service",
+    "translations": { "en": "Sunday service", "ko": "주일예배", "es": "servicio dominical" }
+  },
+  {
+    "term": "small group",
+    "translations": { "en": "small group", "ko": "구역예배", "es": "grupo pequeño" },
+    "note": "the recurring midweek home gathering, not a generic small group"
+  },
+  {
+    "term": "fellowship hall",
+    "translations": { "en": "fellowship hall", "ko": "친교실", "es": "salón de confraternidad" }
+  }
+]

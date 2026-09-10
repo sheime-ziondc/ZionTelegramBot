@@ -1,0 +1,14 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # Keeps per-chat settings, context and usage counters across restarts.
+      - bot-data:/app/data
+    # Only needed when MODE=webhook.
+    ports:
+      - "${PORT:-8080}:8080"
+
+volumes:
+  bot-data:
